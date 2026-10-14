@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tdse"
+version = "0.1.0"
+description = "1D time-dependent Schrödinger equation solver: Visscher leapfrog, FTCS, Crank-Nicolson, with conservation diagnostics and analytical benchmarks."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Alex G. Gauthier" }]
+keywords = [
+    "schrodinger",
+    "quantum-mechanics",
+    "computational-physics",
+    "leapfrog",
+    "crank-nicolson",
+    "visscher",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "matplotlib>=3.8",
+    "imageio>=2.34",
+    "imageio-ffmpeg>=0.4",
+    "pillow>=10.0",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "jupyter>=1.0",
+    "ipykernel>=6.29",
+    "nbformat>=5.9",
+    "nbconvert>=7.0",
+]
+test = [
+    "pytest>=7.4",
+    "pytest-timeout>=2.2",
+]
+dev = [
+    "ruff>=0.4",
+    "tdse[test,notebooks]",
+]
+
+[project.urls]
+Repository = "https://github.com/Alex-G-Gauthier/tdse-leapfrog"
+
+[tool.setuptools]
+packages = ["tdse"]
+
+# --- pytest ------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--showlocals",
+]
+filterwarnings = [
+    # FTCS deliberately blows up; suppress the resulting overflow noise.
+    "ignore::RuntimeWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+# --- ruff (optional, lightweight) -------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = ["notebooks/**", "figures/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "E741",  # ambiguous variable names (we use I, l, etc. for math)
+]
