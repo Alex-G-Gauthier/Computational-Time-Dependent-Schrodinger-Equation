@@ -3,17 +3,15 @@
 * :func:`free_gaussian` -- exact time evolution of a Gaussian wave packet
   in free space (Schiff, *Quantum Mechanics*, Eq. 3.13).
 
-* :func:`isw_eigenstate` -- normalised eigenfunctions of the infinite
-  square well of width ``L`` (psi_n(x) = sqrt(2/L) sin(n pi x / L)),
-  with energies ``E_n = n^2 pi^2 hbar^2 / (2 m L^2)``.
-
-* :func:`sho_eigenstate` -- harmonic oscillator eigenfunctions
-  in terms of physicist's Hermite polynomials.
+* :func:`sho_eigenstate`, :func:`sho_coherent_state` -- harmonic oscillator
+  eigenfunctions (physicist's Hermite polynomials) and the coherent state,
+  a superposition of them that moves like a classical particle.
 
 * :func:`barrier_transmission` -- analytic transmission coefficient for a
   rectangular barrier (Griffiths Eq. 2.171).
 
-* :func:`step_reflection` -- step-potential reflection probability.
+* :func:`transfer_matrix_TR` -- numerically exact transmission for any
+  piecewise-constant potential, used as an independent check.
 """
 
 from __future__ import annotations
@@ -51,27 +49,6 @@ def free_gaussian(x: np.ndarray, t: float, x0: float, sigma0: float,
 
 def free_gaussian_width(t: float, sigma0: float, m: float = units.M_E) -> float:
     return sigma0 * np.sqrt(1.0 + (units.HBAR * t / (2.0 * m * sigma0 ** 2)) ** 2)
-
-
-# ----------------------------------------------------------------------------
-# Infinite square well
-# ----------------------------------------------------------------------------
-
-def isw_eigenstate(n: int, x: np.ndarray, well_left: float,
-                   well_right: float) -> np.ndarray:
-    """Normalised eigenfunction of the infinite well [well_left, well_right]."""
-    L = well_right - well_left
-    psi = np.zeros_like(x)
-    inside = (x >= well_left) & (x <= well_right)
-    psi[inside] = np.sqrt(2.0 / L) * np.sin(
-        n * np.pi * (x[inside] - well_left) / L)
-    return psi
-
-
-def isw_energy(n: int, well_left: float, well_right: float,
-               m: float = units.M_E) -> float:
-    L = well_right - well_left
-    return (n ** 2 * np.pi ** 2 * units.HBAR ** 2) / (2.0 * m * L ** 2)
 
 
 # ----------------------------------------------------------------------------
@@ -113,19 +90,6 @@ def sho_coherent_state(x: np.ndarray, alpha: complex, omega: float,
 # ----------------------------------------------------------------------------
 # Step potential
 # ----------------------------------------------------------------------------
-
-def step_reflection(E: float, V0: float, m: float = units.M_E) -> float:
-    """Reflection probability at a step of height V0.
-
-    For E < V0 we have R = 1.  For E > V0,
-    R = ((k1 - k2)/(k1 + k2))^2 with hbar k_i = sqrt(2 m (E - V_i)).
-    """
-    if E < V0:
-        return 1.0
-    k1 = np.sqrt(2.0 * m * E) / units.HBAR
-    k2 = np.sqrt(2.0 * m * (E - V0)) / units.HBAR
-    return ((k1 - k2) / (k1 + k2)) ** 2
-
 
 # ----------------------------------------------------------------------------
 # Rectangular barrier

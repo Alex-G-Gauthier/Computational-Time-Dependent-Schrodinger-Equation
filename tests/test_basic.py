@@ -2,15 +2,14 @@
 
 These exist so that ``pytest -m "not slow"`` plus ``test_solvers.py`` is
 genuinely fast (few seconds total), giving developers a quick green/red
-signal without waiting for the full §3-§9 physics suite.
+signal; the physics of the three simulations is in ``test_projects.py``.
 """
 
 from __future__ import annotations
 
 import numpy as np
 
-from tdse import (analytical, grid as gridmod, observables, potentials,
-                  solvers, units)
+from tdse import analytical, grid as gridmod, observables, potentials, units
 
 
 # ---------------------------------------------------------------------------
@@ -62,22 +61,6 @@ def test_gaussian_packet_is_normalised():
 # Analytical references
 # ---------------------------------------------------------------------------
 
-def test_isw_eigenstates_orthonormal():
-    """ISW eigenstates should be L^2-orthonormal on the grid."""
-    g = gridmod.make_grid_nm(-2.0, 2.0, 401)
-    L_left, L_right = -1.0 * units.NM, +1.0 * units.NM
-    phi = np.array([analytical.isw_eigenstate(n, g.x, L_left, L_right)
-                    for n in range(1, 5)])
-    # diagonal: norms ~ 1
-    norms = np.sum(np.abs(phi) ** 2, axis=-1) * g.dx
-    assert np.allclose(norms, 1.0, atol=5e-3)
-    # off-diagonal: orthogonality
-    for i in range(4):
-        for j in range(i + 1, 4):
-            ovl = np.sum(phi[i] * phi[j]) * g.dx
-            assert abs(ovl) < 1e-2, f"<phi_{i+1}|phi_{j+1}> = {ovl:.2e}"
-
-
 def test_barrier_transmission_matches_transfer_matrix():
     """Closed-form rectangular-barrier T(E) ≈ transfer-matrix T(E)."""
     g = gridmod.make_grid_nm(-5.0, 5.0, 1001)
@@ -118,31 +101,32 @@ def test_position_expectation_at_centre():
     assert rel_err < 1e-3, f"<x> = {x_meas * 1e9:.4f} nm, expected {x0 * 1e9:.4f} nm"
 
 
-# ---------------------------------------------------------------------------
-# Imaginary-time relaxation: ground-state energy of an SHO
-# ---------------------------------------------------------------------------
-
-def test_imaginary_time_ground_state_sho():
-    """Imag-time relaxation should converge to E_0 = (1/2) hbar omega."""
-    omega = 2.0 * np.pi * 5e13
-    g = gridmod.make_grid_nm(-3.0, 3.0, 301)
-    V = 0.5 * units.M_E * omega ** 2 * g.x ** 2
-    _psi, E0, _hist = solvers.ground_state_imag_time(g, V, n_steps=1500)
-    E_exact = 0.5 * units.HBAR * omega
-    rel_err = abs(E0 - E_exact) / E_exact
-    assert rel_err < 5e-3, (
-        f"imag-time E_0 = {E0 / units.EV * 1e3:.4f} meV, "
-        f"exact = {E_exact / units.EV * 1e3:.4f} meV "
-        f"(rel err {rel_err:.2e})")
-
-
-def test_potential_factory_static_vs_time_dependent_flag():
+def test_potentials_used_in_the_project():
     g = gridmod.make_grid_nm(-2.0, 2.0, 51)
-    V_static = potentials.harmonic(g, omega=1e15)
-    assert V_static.is_time_dependent is False
-    assert isinstance(V_static(g.x, 0.0), np.ndarray)
+    assert np.all(potentials.free(g)(g.x) == 0.0)
+    V_sho = potentials.harmonic(g, omega=1e15)
+    assert V_sho.is_time_dependent is False
+    assert np.argmin(V_sho(g.x)) == g.N // 2
+    V_bar = potentials.rectangular_barrier(g, -0.3 * units.NM, 0.3 * units.NM, 2.0 * units.EV)
+    inside = np.abs(g.x) <= 0.3 * units.NM
+    assert np.allclose(V_bar(g.x)[inside], 2.0 * units.EV)
+    assert np.allclose(V_bar(g.x)[~inside], 0.0)
 
-    V_td = potentials.driven_harmonic(omega=1e15, F0=1e-12, omega_drive=1e15)
-    assert V_td.is_time_dependent is True
-    assert isinstance(V_td(g.x, 0.0), np.ndarray)
-    assert V_td(g.x, 0.0).shape == g.x.shape
+
+def test_coherent_state_is_a_superposition_of_eigenstates():
+    """A displaced ground-state Gaussian = coherent state: its overlaps with the
+    oscillator eigenstates follow a Poisson distribution with mean |alpha|^2."""
+    omega = 2 * np.pi * 3.7e13
+    sigma = np.sqrt(units.HBAR / (2 * units.M_E * omega))
+    alpha = 1.77
+    g = gridmod.make_grid_nm(-6.0, 6.0, 1201)
+    psi = gridmod.gaussian_packet(g, 2 * alpha * sigma, sigma, 0.0)   # <x> = 2 sigma alpha
+    probs = []
+    for n in range(20):
+        phi = analytical.sho_eigenstate(n, g.x, omega)
+        phi = phi / np.sqrt(np.sum(np.abs(phi) ** 2) * g.dx)
+        probs.append(abs(np.sum(np.conj(phi) * psi) * g.dx) ** 2)
+    probs = np.array(probs)
+    poisson = np.exp(-alpha ** 2) * alpha ** (2 * np.arange(20)) / np.cumprod(np.r_[1, np.arange(1, 20)])
+    assert abs(probs.sum() - 1) < 1e-3
+    assert np.max(np.abs(probs - poisson)) < 1e-3

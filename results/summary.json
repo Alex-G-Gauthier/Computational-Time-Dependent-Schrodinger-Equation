@@ -1,0 +1,129 @@
+{
+  "ftcs_norm_growth_decades_400_steps": 90.0,
+  "norm_drift": {
+    "leapfrog_visscher_norm": 5.55273198068027e-16,
+    "leapfrog_ordinary_norm": 1.8306580473748105e-07,
+    "crank_nicolson": 6.228351168147126e-14,
+    "split_operator": 4.639622019908527e-13
+  },
+  "energy_drift": {
+    "leapfrog": 2.1287623592829034e-07,
+    "crank_nicolson": 1.8011059770296613e-09,
+    "split_operator": 3.775965472113788e-08
+  },
+  "cfl_norm_growth_decades_60fs": {
+    "0.5": 0.0,
+    "0.95": 0.0,
+    "1.02": 204.83,
+    "1.1": 297.8
+  },
+  "free_particle": {
+    "dx_nm": 0.1,
+    "group_velocity_nm_per_fs_exact": 0.4193828812400624,
+    "group_velocity_nm_per_fs_on_grid_theory": 0.41026998641854284,
+    "group_velocity_nm_per_fs_measured": 0.410198282111093,
+    "width_growth_measured": 1.47393562360791,
+    "width_growth_exact": 1.5296425235982427,
+    "max_width_error_percent": 3.6418247486541877,
+    "max_width_error_percent_half_dx": 0.9354452369101707,
+    "energy_drift": 4.0280058915166345e-08
+  },
+  "superposition": {
+    "alpha": 1.768,
+    "mean_occupation_number": 3.125,
+    "energy_expected_eV": 0.5546964295100395,
+    "energy_measured_eV": 0.5546948912604557,
+    "largest_eigenstate_weights": {
+      "1": 0.137,
+      "2": 0.215,
+      "3": 0.223,
+      "4": 0.175,
+      "5": 0.109,
+      "6": 0.057
+    },
+    "max_deviation_from_classical_nm": 0.004954131609188852,
+    "classical_amplitude_nm": 1.7641795968429046,
+    "width_change_percent": 0.4237692744899096,
+    "energy_drift": 1.389492996417454e-07
+  },
+  "tunnelling": {
+    "V0_eV": 2.0,
+    "width_nm": 0.6,
+    "packet_sigma_nm": 1.5,
+    "dx_nm": 0.024999999999999998,
+    "points": [
+      {
+        "E_eV": 0.5,
+        "T_simulation": 0.0017335817763098151,
+        "T_exact_for_packet": 0.0017170638920396475,
+        "ratio": 1.0096198425386178
+      },
+      {
+        "E_eV": 0.9,
+        "T_simulation": 0.006805039247858968,
+        "T_exact_for_packet": 0.006798755969357422,
+        "ratio": 1.0009241806191995
+      },
+      {
+        "E_eV": 1.2,
+        "T_simulation": 0.017229567125548597,
+        "T_exact_for_packet": 0.01733646267947993,
+        "ratio": 0.9938340620051713
+      },
+      {
+        "E_eV": 1.6,
+        "T_simulation": 0.0587556908663724,
+        "T_exact_for_packet": 0.05971493747141831,
+        "ratio": 0.9839362369674247
+      },
+      {
+        "E_eV": 1.9,
+        "T_simulation": 0.14718103399411736,
+        "T_exact_for_packet": 0.15033467556447322,
+        "ratio": 0.9790225271813396
+      },
+      {
+        "E_eV": 2.1,
+        "T_simulation": 0.2615195451027768,
+        "T_exact_for_packet": 0.26741440886237267,
+        "ratio": 0.9779560728059732
+      },
+      {
+        "E_eV": 2.5,
+        "T_simulation": 0.6303554072452854,
+        "T_exact_for_packet": 0.6408994710908135,
+        "ratio": 0.9835480222388356
+      },
+      {
+        "E_eV": 3.0,
+        "T_simulation": 0.9519937707884419,
+        "T_exact_for_packet": 0.9568023784354437,
+        "ratio": 0.9949742937984072
+      },
+      {
+        "E_eV": 4.0,
+        "T_simulation": 0.9035353700094079,
+        "T_exact_for_packet": 0.9091092272095767,
+        "ratio": 0.993868880621444
+      },
+      {
+        "E_eV": 5.0,
+        "T_simulation": 0.9454763345408801,
+        "T_exact_for_packet": 0.9561643951903949,
+        "ratio": 0.9888219424365968
+      }
+    ],
+    "grid_convergence": [
+      {
+        "E_eV": 1.6,
+        "error_percent_dx_0.05nm": -6.275748671643622,
+        "error_percent_dx_0.025nm": -1.6063763032575284
+      },
+      {
+        "E_eV": 2.1,
+        "error_percent_dx_0.05nm": -9.059281316723833,
+        "error_percent_dx_0.025nm": -2.2043927194026813
+      }
+    ]
+  }
+}

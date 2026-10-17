@@ -97,105 +97,27 @@ def reflection_transmission_timeseries(result, barrier_left: float,
     return np.asarray(Rs), np.asarray(Ts)
 
 
-def project_onto(psi: np.ndarray, phi: np.ndarray, dx: float) -> complex:
-    """``<phi|psi> = int phi^* psi dx``."""
-    return complex(np.sum(np.conj(phi) * psi) * dx)
-
-
-# ----------------------------------------------------------------------------
-# Spectral / projection observables
-# ----------------------------------------------------------------------------
-
-def populations(result, states: np.ndarray) -> np.ndarray:
-    """Populations :math:`P_n(t) = |\\langle \\phi_n | \\psi(t)\\rangle|^2`.
-
-    Parameters
-    ----------
-    result : SolverResult
-    states : (n_states, N) array of reference states, normalised in the
-             same convention as ``result.psi`` (``int |phi|^2 dx = 1``).
-
-    Returns
-    -------
-    P : (n_save, n_states) real array
-    """
-    dx = result.grid.dx
-    # overlap matrix = (n_save, N) @ (N, n_states)
-    overlap = result.psi @ (np.conj(states).T) * dx
-    return np.abs(overlap) ** 2
-
-
-def autocorrelation(result, psi0: np.ndarray) -> np.ndarray:
-    """Autocorrelation :math:`C(t) = \\langle \\psi(0) | \\psi(t) \\rangle`
-    evaluated on the saved snapshots.  Complex-valued.
-    """
-    dx = result.grid.dx
-    return (result.psi @ np.conj(psi0)) * dx
-
-
-def bound_population(result, states: np.ndarray) -> np.ndarray:
-    """Total population in the listed reference states:
-    :math:`P_{\\rm bound}(t) = \\sum_n |\\langle\\phi_n|\\psi(t)\\rangle|^2`.
-
-    Useful as an *ionisation* diagnostic when combined with absorbing BCs:
-    whatever leaves the bound subspace either sits in the continuum or has
-    been absorbed at the edges.
-    """
-    return np.sum(populations(result, states), axis=-1)
-
-
-def dipole_acceleration(result, V_grad: np.ndarray,
-                        field_fn=None, q: float = -units.E_CHARGE,
+def probability_current(psi: np.ndarray, dx: float, index: int,
                         m: float = units.M_E) -> np.ndarray:
-    r"""Dipole acceleration via Ehrenfest,
+    """Probability current ``j = (hbar/m) Im(psi* dpsi/dx)`` at grid point ``index``
+    for a stack of snapshots ``psi[k, :]`` (centred difference)."""
+    dpsi = (psi[..., index + 1] - psi[..., index - 1]) / (2.0 * dx)
+    return units.HBAR / m * np.imag(np.conj(psi[..., index]) * dpsi)
 
-    .. math::
-        a(t) = \frac{1}{m}\,\Big\langle -\frac{\partial V}{\partial x}
-                                      + q\,E(t)\Big\rangle.
 
-    ``V_grad`` is the spatial derivative of the *static* part of the
-    potential (shape ``(N,)``), typically computed with ``np.gradient(V0, dx)``.
-    ``field_fn`` is an optional callable returning the laser field
-    ``E(t)`` (in V/m); if provided the uniform ``q E(t)`` contribution is
-    added.  ``q`` defaults to the *electron* charge (negative).
+def transmitted_probability(result, x_probe: float, m: float = units.M_E) -> float:
+    """Total probability that flows past ``x_probe`` during the run,
+    ``T = integral of j(x_probe, t) dt``.
 
-    Returns a real array of shape ``(n_save,)`` in m/s^2.  This is the
-    standard input to HHG spectra:
-    :math:`S(\omega) \propto |\tilde a(\omega)|^2`.
+    Counting the flow as it passes the probe means an absorbing edge further
+    out cannot remove transmitted probability before it is counted.  Save
+    enough snapshots (``n_save`` ~ 1000+) to resolve the packet passing by.
     """
-    dx = result.grid.dx
-    rho = np.abs(result.psi) ** 2           # (n_save, N)
-    a = -np.sum(rho * V_grad, axis=-1) * dx / m
-    if field_fn is not None:
-        a = a + q * np.asarray([field_fn(t) for t in result.times]) / m
-    return a
-
-
-def power_spectrum(signal: np.ndarray, dt: float, window: str = "hann"):
-    r"""One-sided power spectrum :math:`|\tilde s(\omega)|^2` of a uniformly
-    sampled real or complex signal.
-
-    Returns ``(omega, S)`` with ``omega`` in rad/s and ``S`` the squared
-    magnitude of the windowed Fourier transform.  A Hann window is applied
-    by default to suppress ringing from finite record length.
-    """
-    n = len(signal)
-    if window == "hann":
-        w = np.hanning(n)
-    elif window == "none" or window is None:
-        w = np.ones(n)
-    else:
-        raise ValueError(f"unknown window {window!r}")
-    s = np.asarray(signal) * w
-    # rfft if real, fft otherwise
-    if np.iscomplexobj(s):
-        Sk = np.fft.fftshift(np.fft.fft(s) * dt)
-        freqs = np.fft.fftshift(np.fft.fftfreq(n, d=dt))
-    else:
-        Sk = np.fft.rfft(s) * dt
-        freqs = np.fft.rfftfreq(n, d=dt)
-    omega = 2.0 * np.pi * freqs
-    return omega, np.abs(Sk) ** 2
+    g = result.grid
+    i = int(np.searchsorted(g.x, x_probe))
+    j = probability_current(result.psi, g.dx, i, m=m)
+    t = result.times
+    return float(np.sum(0.5 * (j[1:] + j[:-1]) * np.diff(t)))   # trapezoid rule
 
 
 # ----------------------------------------------------------------------------

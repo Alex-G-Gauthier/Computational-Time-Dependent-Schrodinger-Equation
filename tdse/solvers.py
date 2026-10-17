@@ -1,5 +1,4 @@
-"""Four time-integrators for the 1-D time-dependent Schrödinger equation,
-plus an imaginary-time relaxation helper for ground-state preparation.
+"""Four time-integrators for the 1-D time-dependent Schrödinger equation.
 
 Notation (used throughout the docstrings)
 -----------------------------------------
@@ -72,7 +71,7 @@ from typing import Optional
 
 import numpy as np
 from scipy import sparse
-from scipy.sparse.linalg import eigsh, splu
+from scipy.sparse.linalg import splu
 
 from . import units
 from .boundaries import (BCName, BoundaryMask, build_laplacian,
@@ -629,7 +628,7 @@ class SplitOperatorSolver(_BaseSolver):
 
 
 # ============================================================================
-# Time-independent helpers: build H, find eigenstates, imaginary-time relax
+# Sparse Hamiltonian matrix
 # ============================================================================
 
 def build_hamiltonian(grid: Grid1D, V: np.ndarray, bc: BCName = "hard",
@@ -644,102 +643,3 @@ def build_hamiltonian(grid: Grid1D, V: np.ndarray, bc: BCName = "hard",
     return (T_op + sparse.diags(np.asarray(V), 0, format="csr")).tocsr()
 
 
-def bound_eigenstates(grid: Grid1D, V: np.ndarray, n_states: int,
-                      bc: BCName = "hard", m: float = units.M_E):
-    """Lowest ``n_states`` eigenpairs of the discretised Hamiltonian.
-
-    Returns ``(E, phi)`` with ``E`` shape ``(n_states,)`` (in J, ascending)
-    and ``phi`` shape ``(n_states, N)`` with each row :math:`L^2`-normalised
-    on the grid (``int |phi_n|^2 dx = 1``).
-
-    Implementation: sparse Lanczos (``scipy.sparse.linalg.eigsh`` with
-    ``which='SA'``) on the sparse H.  For the grid sizes used in this
-    project (N <= ~2000) this is milliseconds.
-    """
-    H = build_hamiltonian(grid, V, bc=bc, m=m)
-    E, phi = eigsh(H, k=n_states, which="SA")
-    order = np.argsort(E)
-    E = E[order]
-    phi = phi[:, order].T                      # (n_states, N)
-    dx = grid.dx
-    for n in range(n_states):
-        phi[n] = phi[n] / np.sqrt(np.sum(np.abs(phi[n]) ** 2) * dx)
-        # Fix a consistent global sign so repeated runs return the same
-        # phase choice (purely cosmetic, useful for diff-ing snapshots).
-        imax = int(np.argmax(np.abs(phi[n])))
-        if phi[n, imax].real < 0:
-            phi[n] = -phi[n]
-    return E, phi
-
-
-def ground_state_imag_time(
-    grid: Grid1D,
-    V: np.ndarray,
-    d_tau: Optional[float] = None,
-    n_steps: int = 2000,
-    psi0: Optional[np.ndarray] = None,
-    bc: BCName = "hard",
-    m: float = units.M_E,
-    tol: float = 1e-12,
-):
-    r"""Ground-state preparation by imaginary-time evolution.
-
-    Replace :math:`t \to -i\tau` in the TDSE and it becomes a *diffusion*
-    equation :math:`\partial_\tau \psi = -H\psi/\hbar` whose formal solution
-
-    .. math::
-        \psi(\tau) \propto \sum_n c_n e^{-E_n \tau/\hbar}\phi_n
-                \;\xrightarrow{\tau \to \infty}\; c_0 \phi_0
-
-    projects out the ground state exponentially fast, provided
-    :math:`c_0 \neq 0`.  We implement the update with Crank-Nicolson in
-    imaginary time,
-    :math:`(1 + H\,d\tau/(2\hbar))\psi^{n+1} = (1 - H\,d\tau/(2\hbar))\psi^n`,
-    followed by re-normalisation after each step.
-
-    Returns
-    -------
-    psi_gs : (N,) ndarray (complex)
-    E_gs   : float   (joules)
-    energy_history : (n_iter,) ndarray -- <H> per iteration, for diagnostics
-    """
-    N = grid.N
-    dx = grid.dx
-    V_arr = np.asarray(V, dtype=float)
-
-    if d_tau is None:
-        # CN in imaginary time is unconditionally stable, so a larger d_tau
-        # than the real-time CFL bound is fine.  We pick a value that makes
-        # the per-step damping of E ~ 2 eV states already 1/e, so moderately
-        # excited components die in ~20 iterations.
-        T_scale = units.kinetic_energy_scale(dx, m)
-        d_tau = 1.0 * units.HBAR / max(T_scale, 1e-60)
-
-    if psi0 is None:
-        x = grid.x
-        x_mid = 0.5 * (grid.x_min + grid.x_max)
-        sigma = 0.1 * grid.L
-        psi0 = np.exp(-((x - x_mid) ** 2) / (2.0 * sigma ** 2))
-
-    psi = psi0.astype(np.complex128).copy()
-    psi /= np.sqrt(np.sum(np.abs(psi) ** 2) * dx)
-
-    H = build_hamiltonian(grid, V_arr, bc=bc, m=m)
-    I_mat = sparse.eye(N, format="csr", dtype=np.complex128)
-    A = (I_mat + 0.5 * d_tau / units.HBAR * H).tocsc()
-    B = (I_mat - 0.5 * d_tau / units.HBAR * H).tocsr()
-    lu = splu(A)
-
-    E_hist = np.zeros(n_steps)
-    E_prev: Optional[float] = None
-    for k in range(n_steps):
-        psi = lu.solve(B @ psi)
-        psi /= np.sqrt(np.sum(np.abs(psi) ** 2) * dx)
-        E_hist[k] = float(np.real(np.conj(psi) @ (H @ psi)) * dx)
-        if E_prev is not None:
-            if abs(E_hist[k] - E_prev) / max(abs(E_prev), 1e-30) < tol:
-                E_hist = E_hist[: k + 1]
-                break
-        E_prev = E_hist[k]
-
-    return psi, float(E_hist[-1]), E_hist

@@ -4,7 +4,7 @@ Modules
 -------
 units        : SI constants and display-scale conversions.
 grid         : 1D spatial and temporal grids.
-potentials   : library of static and time-dependent potentials.
+potentials   : free space, harmonic oscillator and rectangular barrier.
 boundaries   : hard-wall, periodic, and absorbing boundary helpers.
 solvers      : Visscher leapfrog, naive FTCS, Crank-Nicolson, and FFT split-operator.
 observables  : norms, expectation values, transmission/reflection.

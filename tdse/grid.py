@@ -60,7 +60,7 @@ def visscher_dt_max(grid: Grid1D, V_max: float, m: float = units.M_E,
                     safety: float = 0.9) -> float:
     """Maximum stable timestep for the Visscher leapfrog scheme.
 
-    The von Neumann analysis (worked out in notebook 00) gives the bound
+    Von Neumann stability analysis (Part I.3 of the final project) gives the bound
 
     .. math::
         \\Delta t \\le \\frac{\\hbar}{\\tfrac12 V_{\\max} + 2\\hbar^2/(m\\,dx^2)}.
