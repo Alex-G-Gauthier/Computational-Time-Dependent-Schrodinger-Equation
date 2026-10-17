@@ -50,7 +50,7 @@ dev = [
 ]
 
 [project.urls]
-Repository = "https://github.com/Alex-G-Gauthier/tdse-leapfrog"
+Repository = "https://github.com/Alex-G-Gauthier/Computational-Time-Independent-Schrodinger-Equation"
 
 [tool.setuptools]
 packages = ["tdse"]

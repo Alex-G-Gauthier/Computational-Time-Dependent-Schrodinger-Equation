@@ -1,6 +1,6 @@
 # Quantum Wave Packets: Free Particle, Superposition and Tunnelling
 
-[![CI](https://github.com/Alex-G-Gauthier/tdse-leapfrog/actions/workflows/ci.yml/badge.svg)](https://github.com/Alex-G-Gauthier/tdse-leapfrog/actions/workflows/ci.yml)
+[![CI](https://github.com/Alex-G-Gauthier/Computational-Time-Independent-Schrodinger-Equation/actions/workflows/ci.yml/badge.svg)](https://github.com/Alex-G-Gauthier/Computational-Time-Independent-Schrodinger-Equation/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.12-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
